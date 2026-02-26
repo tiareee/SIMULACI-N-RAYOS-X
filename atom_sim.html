@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Átomo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050a14;color:#c8ddf0;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;width:100vw;}
+canvas{position:absolute;top:0;left:0;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+#title{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;}
+#title h1{font-size:.85rem;font-weight:300;letter-spacing:4px;color:#5ab0e8;text-transform:uppercase;}
+#title p{font-size:.54rem;color:#2a5a80;letter-spacing:2px;margin-top:2px;}
+
+/* LEFT PANEL */
+#info{position:absolute;left:12px;top:60px;width:190px;background:rgba(4,12,28,.93);border:1px solid #1a3a5a;border-radius:8px;padding:12px 14px;font-size:.62rem;line-height:1.85;}
+#info h3{color:#4a9fd4;letter-spacing:2px;font-size:.58rem;text-transform:uppercase;margin-bottom:7px;}
+.row{display:flex;justify-content:space-between;margin-bottom:1px;}
+.lb{color:#3a6a8a;}.vl{color:#b0d8f8;font-weight:500;}
+hr{border:none;border-top:1px solid #0e2a40;margin:7px 0;}
+.shell-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.shell-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.shell-lbl{color:#3a6a8a;font-size:.58rem;}
+.shell-val{color:#b0d8f8;font-size:.58rem;margin-left:auto;}
+
+/* RIGHT PANEL */
+#legend{position:absolute;right:12px;top:60px;width:190px;background:rgba(4,12,28,.93);border:1px solid #1a3a5a;border-radius:8px;padding:12px 14px;font-size:.61rem;line-height:1.75;}
+#legend h3{color:#4a9fd4;letter-spacing:2px;font-size:.58rem;text-transform:uppercase;margin-bottom:7px;}
+.leg-item{margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #0d2035;}
+.leg-item:last-child{border-bottom:none;margin-bottom:0;}
+.leg-title{color:#7ab8d8;font-size:.62rem;font-weight:600;margin-bottom:2px;}
+.leg-desc{color:#3a6a8a;font-size:.56rem;line-height:1.5;}
+.leg-icon{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:4px;}
+
+/* METAL PANEL */
+#metal-panel{position:absolute;bottom:48px;right:12px;width:min(660px,90vw);background:rgba(4,12,28,.96);border:1px solid #1a3a5a;border-radius:10px;padding:10px 14px 12px;pointer-events:all;display:none;}
+#metal-panel.open{display:block;}
+#metal-panel h3{color:#4a9fd4;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;text-align:center;}
+#mgrid{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;max-height:120px;overflow-y:auto;}
+.mb{padding:3px 7px;border-radius:3px;border:1px solid #1a3a4a;background:rgba(8,20,45,.9);color:#3a7aaa;font-size:.54rem;cursor:pointer;transition:all .15s;text-align:center;min-width:40px;}
+.mb:hover{background:rgba(20,60,100,.9);border-color:#4a9fd4;color:#c0e8ff;}
+.mb.active{background:rgba(20,80,140,.95);border-color:#4adfff;color:#fff;}
+.mb.opt{border-color:#28805a;}
+.mb.opt.active{background:rgba(10,60,30,.95);border-color:#30e080;}
+.mb span{display:block;font-size:.44rem;color:#2a5a6a;margin-top:1px;}
+#mtoggle{position:absolute;bottom:10px;right:12px;pointer-events:all;}
+#mtoggle button{padding:7px 16px;border-radius:6px;border:1px solid #1a4a6a;background:rgba(5,18,45,.95);color:#4a9fd4;font-size:.62rem;letter-spacing:1px;cursor:pointer;transition:all .2s;}
+#mtoggle button:hover,#mtoggle button.on{background:rgba(20,60,110,.95);border-color:#4adfff;color:#a0d8ff;}
+
+/* VACANCY TOGGLE */
+#vac-toggle{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);pointer-events:all;}
+#vac-toggle button{padding:7px 16px;border-radius:6px;border:1px solid #3a1a5a;background:rgba(18,5,45,.95);color:#a060d4;font-size:.62rem;letter-spacing:1px;cursor:pointer;transition:all .2s;}
+#vac-toggle button:hover,#vac-toggle button.on{background:rgba(60,20,110,.95);border-color:#c080ff;color:#e0c0ff;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="title">
+    <h1>Estructura del Átomo</h1>
+    <p>Núcleo · Capas K L M N · Electrones corticales · Número atómico Z</p>
+  </div>
+
+  <div id="info">
+    <h3>Átomo seleccionado</h3>
+    <div class="row"><span class="lb">Símbolo</span><span class="vl" id="i-sym">Mo</span></div>
+    <div class="row"><span class="lb">Nombre</span><span class="vl" id="i-name">Molibdeno</span></div>
+    <div class="row"><span class="lb">Número Z</span><span class="vl" id="i-z" style="color:#ffcc44">42</span></div>
+    <div class="row"><span class="lb">Núcleo</span><span class="vl" id="i-nuc">42p · 54n</span></div>
+    <hr>
+    <div style="color:#4a9fd4;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Electrones por capa</div>
+    <div class="shell-row"><div class="shell-dot" style="background:#ff6060"></div><span class="shell-lbl">Capa K (n=1, máx 2)</span><span class="shell-val" id="s-k">2</span></div>
+    <div class="shell-row"><div class="shell-dot" style="background:#ffaa30"></div><span class="shell-lbl">Capa L (n=2, máx 8)</span><span class="shell-val" id="s-l">8</span></div>
+    <div class="shell-row"><div class="shell-dot" style="background:#40d0a0"></div><span class="shell-lbl">Capa M (n=3, máx 18)</span><span class="shell-val" id="s-m">18</span></div>
+    <div class="shell-row"><div class="shell-dot" style="background:#4a9fd4"></div><span class="shell-lbl">Capa N (n=4, máx 32)</span><span class="shell-val" id="s-n">13</span></div>
+    <div class="shell-row"><div class="shell-dot" style="background:#9060d0"></div><span class="shell-lbl">Capa O (n=5, máx 50)</span><span class="shell-val" id="s-o">1</span></div>
+    <hr>
+    <div class="row"><span class="lb">E. ligadura K</span><span class="vl" id="i-ek" style="color:#ff8080">—</span></div>
+    <div class="row"><span class="lb">K-alfa</span><span class="vl" id="i-ka" style="color:#ff50b0">—</span></div>
+  </div>
+
+  <div id="legend">
+    <h3>Guía visual</h3>
+    <div class="leg-item">
+      <div class="leg-title"><span class="leg-icon" style="background:radial-gradient(circle,#ff9060,#cc2020)"></span>Núcleo</div>
+      <div class="leg-desc">Contiene <b style="color:#ffaa80">protones (Z)</b> y <b style="color:#aaaaaa">neutrones</b>. El número Z define el elemento y determina las energías de sus transiciones electrónicas.</div>
+    </div>
+    <div class="leg-item">
+      <div class="leg-title"><span class="leg-icon" style="background:#ff6060"></span>Capa K — la más importante</div>
+      <div class="leg-desc">Más cercana al núcleo. Máx. 2 e⁻. Su <b style="color:#ff8080">energía de ligadura</b> es la más alta. La ionización de esta capa produce la <b style="color:#ff50b0">radiación K-alfa y K-beta</b>.</div>
+    </div>
+    <div class="leg-item">
+      <div class="leg-title"><span class="leg-icon" style="background:#ffaa30"></span>Capas L, M, N...</div>
+      <div class="leg-desc">Más alejadas. Electrones menos ligados. Cuando un e⁻ de L cae a la vacante en K → emite <b style="color:#ff50b0">K-alfa</b>. Desde M → emite <b style="color:#40e888">K-beta</b>.</div>
+    </div>
+    <div class="leg-item">
+      <div class="leg-title"><span class="leg-icon" style="background:#c080ff"></span>Vacante en capa K</div>
+      <div class="leg-desc">El hueco que deja un e⁻ ionizado. Es el <b style="color:#c080ff">origen de toda la radiación característica</b> usada en mamografía.</div>
+    </div>
+  </div>
+
+  <div id="metal-panel">
+    <h3>⚛ Seleccionar metal del ánodo</h3>
+    <div id="mgrid"></div>
+  </div>
+  <div id="mtoggle"><button id="mbtoggle-btn" onclick="toggleM()">⚛ Cambiar Metal ▲</button></div>
+
+  <div id="vac-toggle"><button id="vac-btn" onclick="toggleVac()">💥 Mostrar Vacante K</button></div>
+</div>
+
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+let W,H;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+window.addEventListener('resize',resize);
+resize();
+
+const METALS=[
+  {s:'Sc',n:'Escandio',  z:21,mass:45, shells:[2,8,9,2,0],  ek:4.49, ka:4.09},
+  {s:'Ti',n:'Titanio',   z:22,mass:48, shells:[2,8,10,2,0], ek:5.0,  ka:4.51},
+  {s:'V', n:'Vanadio',   z:23,mass:51, shells:[2,8,11,2,0], ek:5.47, ka:4.95},
+  {s:'Cr',n:'Cromo',     z:24,mass:52, shells:[2,8,13,1,0], ek:6.0,  ka:5.41},
+  {s:'Mn',n:'Manganeso', z:25,mass:55, shells:[2,8,13,2,0], ek:6.54, ka:5.90},
+  {s:'Fe',n:'Hierro',    z:26,mass:56, shells:[2,8,14,2,0], ek:7.11, ka:6.40},
+  {s:'Co',n:'Cobalto',   z:27,mass:59, shells:[2,8,15,2,0], ek:7.71, ka:6.93},
+  {s:'Ni',n:'Níquel',    z:28,mass:58, shells:[2,8,16,2,0], ek:8.33, ka:7.48},
+  {s:'Cu',n:'Cobre',     z:29,mass:64, shells:[2,8,18,1,0], ek:8.98, ka:8.05},
+  {s:'Zn',n:'Zinc',      z:30,mass:65, shells:[2,8,18,2,0], ek:9.66, ka:8.64},
+  {s:'Ga',n:'Galio',     z:31,mass:70, shells:[2,8,18,3,0], ek:10.37,ka:9.25},
+  {s:'Ge',n:'Germanio',  z:32,mass:74, shells:[2,8,18,4,0], ek:11.1, ka:9.89},
+  {s:'As',n:'Arsénico',  z:33,mass:75, shells:[2,8,18,5,0], ek:11.87,ka:10.54},
+  {s:'Se',n:'Selenio',   z:34,mass:79, shells:[2,8,18,6,0], ek:12.66,ka:11.22},
+  {s:'Br',n:'Bromo',     z:35,mass:80, shells:[2,8,18,7,0], ek:13.47,ka:11.92},
+  {s:'Kr',n:'Kriptón',   z:36,mass:84, shells:[2,8,18,8,0], ek:14.33,ka:12.65},
+  {s:'Rb',n:'Rubidio',   z:37,mass:85, shells:[2,8,18,8,1], ek:15.2, ka:13.39},
+  {s:'Sr',n:'Estroncio', z:38,mass:88, shells:[2,8,18,8,2], ek:16.1, ka:14.16},
+  {s:'Y', n:'Itrio',     z:39,mass:89, shells:[2,8,18,9,2], ek:17.04,ka:14.96},
+  {s:'Zr',n:'Zirconio',  z:40,mass:91, shells:[2,8,18,10,2],ek:18.0, ka:15.77},
+  {s:'Nb',n:'Niobio',    z:41,mass:93, shells:[2,8,18,12,1],ek:19.0, ka:16.62},
+  {s:'Mo',n:'Molibdeno', z:42,mass:96, shells:[2,8,18,13,1],ek:20.0, ka:17.48},
+  {s:'Tc',n:'Tecnecio',  z:43,mass:98, shells:[2,8,18,13,2],ek:21.04,ka:18.37},
+  {s:'Ru',n:'Rutenio',   z:44,mass:101,shells:[2,8,18,15,1],ek:22.12,ka:19.28},
+  {s:'Rh',n:'Rodio',     z:45,mass:103,shells:[2,8,18,16,1],ek:23.22,ka:20.22},
+  {s:'Pd',n:'Paladio',   z:46,mass:106,shells:[2,8,18,18,0],ek:24.35,ka:21.18},
+  {s:'Ag',n:'Plata',     z:47,mass:108,shells:[2,8,18,18,1],ek:25.51,ka:22.16},
+  {s:'Cd',n:'Cadmio',    z:48,mass:112,shells:[2,8,18,18,2],ek:26.71,ka:23.17},
+  {s:'In',n:'Indio',     z:49,mass:115,shells:[2,8,18,18,3],ek:27.94,ka:24.21},
+  {s:'Sn',n:'Estaño',    z:50,mass:119,shells:[2,8,18,18,4],ek:29.2, ka:25.27},
+  {s:'Sb',n:'Antimonio', z:51,mass:122,shells:[2,8,18,18,5],ek:30.49,ka:26.36},
+  {s:'Te',n:'Telurio',   z:52,mass:128,shells:[2,8,18,18,6],ek:31.81,ka:27.47},
+  {s:'I', n:'Yodo',      z:53,mass:127,shells:[2,8,18,18,7],ek:33.17,ka:28.61},
+  {s:'Xe',n:'Xenón',     z:54,mass:131,shells:[2,8,18,18,8],ek:34.56,ka:29.78},
+  {s:'Cs',n:'Cesio',     z:55,mass:133,shells:[2,8,18,18,8,1],ek:35.98,ka:30.97},
+  {s:'Ba',n:'Bario',     z:56,mass:137,shells:[2,8,18,18,8,2],ek:37.44,ka:32.19},
+  {s:'La',n:'Lantano',   z:57,mass:139,shells:[2,8,18,18,9,2],ek:38.92,ka:33.44},
+  {s:'Hf',n:'Hafnio',    z:72,mass:178,shells:[2,8,18,32,10,2],ek:65.35,ka:55.79},
+  {s:'Ta',n:'Tantalio',  z:73,mass:181,shells:[2,8,18,32,11,2],ek:67.42,ka:57.53},
+  {s:'W', n:'Wolframio', z:74,mass:184,shells:[2,8,18,32,12,2],ek:69.52,ka:59.32},
+  {s:'Re',n:'Renio',     z:75,mass:186,shells:[2,8,18,32,13,2],ek:71.68,ka:61.14},
+  {s:'Os',n:'Osmio',     z:76,mass:192,shells:[2,8,18,32,14,2],ek:73.87,ka:63.00},
+  {s:'Ir',n:'Iridio',    z:77,mass:193,shells:[2,8,18,32,15,2],ek:76.11,ka:64.90},
+  {s:'Pt',n:'Platino',   z:78,mass:195,shells:[2,8,18,32,17,1],ek:78.39,ka:66.83},
+  {s:'Au',n:'Oro',       z:79,mass:197,shells:[2,8,18,32,18,1],ek:80.72,ka:68.80},
+  {s:'Hg',n:'Mercurio',  z:80,mass:201,shells:[2,8,18,32,18,2],ek:83.1, ka:70.82},
+];
+
+const SHELL_COLORS=['#ff6060','#ffaa30','#40d0a0','#4a9fd4','#9060d0','#e060c0'];
+const SHELL_NAMES=['K','L','M','N','O','P'];
+const SHELL_MAX=[2,8,18,32,50,72];
+
+let curM=METALS.find(m=>m.s==='Mo');
+let showVac=false;
+let vacAngle=0;
+let frame=0;
+// electron angle trackers per shell
+let eAngles=[];
+initAngles();
+
+function initAngles(){
+  eAngles=curM.shells.map((n,si)=>{
+    return Array.from({length:n},(_,i)=>(2*Math.PI*i/n));
+  });
+}
+
+// nucleus particles
+let nucParticles=[];
+function buildNucleus(){
+  nucParticles=[];
+  const total=curM.z+(curM.mass-curM.z);
+  const r=nucR();
+  for(let i=0;i<Math.min(total,80);i++){
+    const isP=i<curM.z;
+    const ang=Math.random()*Math.PI*2;
+    const rd=Math.random()*r*0.75;
+    nucParticles.push({x:Math.cos(ang)*rd,y:Math.sin(ang)*rd,r:isP?2.8:2.5,
+      col:isP?'#ff7060':'#8899aa',vx:(Math.random()-.5)*0.3,vy:(Math.random()-.5)*0.3,isP});
+  }
+}
+buildNucleus();
+
+function nucR(){return Math.min(W,H)*0.045;}
+function cx(){return W/2;}
+function cy(){return H/2+10;}
+function shellR(si){
+  const base=nucR()+22;
+  const maxR=Math.min(W,H)*0.42-base;
+  const nShells=curM.shells.filter(s=>s>0).length;
+  return base+(si/(Math.max(nShells-1,1)))*maxR;
+}
+
+function selMetal(s){
+  curM=METALS.find(m=>m.s===s);
+  initAngles();
+  buildNucleus();
+  document.querySelectorAll('.mb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mb'+s).classList.add('active');
+  updateInfo();
+}
+function updateInfo(){
+  const m=curM;
+  document.getElementById('i-sym').textContent=m.s;
+  document.getElementById('i-name').textContent=m.n;
+  document.getElementById('i-z').textContent=m.z;
+  document.getElementById('i-nuc').textContent=m.z+'p · '+(m.mass-m.z)+'n';
+  const labels=['s-k','s-l','s-m','s-n','s-o'];
+  labels.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el)el.textContent=m.shells[i]||0;
+  });
+  document.getElementById('i-ek').textContent=m.ek.toFixed(2)+' keV';
+  document.getElementById('i-ka').textContent=m.ka.toFixed(2)+' keV';
+}
+updateInfo();
+
+// build grid
+const grid=document.getElementById('mgrid');
+METALS.forEach(m=>{
+  const ideal=(m.ka>=17&&m.ka<=23);
+  const b=document.createElement('button');
+  b.className='mb'+(ideal?' opt':'')+(m.s==='Mo'?' active':'');
+  b.id='mb'+m.s;
+  b.innerHTML=m.s+'<span>Z='+m.z+'</span>';
+  b.onclick=()=>selMetal(m.s);
+  grid.appendChild(b);
+});
+
+function toggleM(){
+  const p=document.getElementById('metal-panel'),b=document.getElementById('mbtoggle-btn');
+  const o=p.classList.toggle('open');
+  b.textContent=o?'⚛ Cambiar Metal ▼':'⚛ Cambiar Metal ▲';
+  b.classList.toggle('on',o);
+}
+function toggleVac(){
+  showVac=!showVac;
+  const b=document.getElementById('vac-btn');
+  b.textContent=showVac?'💥 Ocultar Vacante K':'💥 Mostrar Vacante K';
+  b.classList.toggle('on',showVac);
+}
+
+function drawScene(){
+  ctx.clearRect(0,0,W,H);
+  const x0=cx(),y0=cy();
+
+  // bg glow
+  const bg=ctx.createRadialGradient(x0,y0,0,x0,y0,Math.min(W,H)*0.5);
+  bg.addColorStop(0,'rgba(10,30,60,.18)');
+  bg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  const activeShells=curM.shells.map((n,i)=>({n,i})).filter(s=>s.n>0);
+
+  // draw shells (orbits)
+  activeShells.forEach(({n,i:si})=>{
+    const r=shellR(si);
+    const col=SHELL_COLORS[si]||'#aaa';
+    ctx.beginPath();ctx.arc(x0,y0,r,0,Math.PI*2);
+    ctx.strokeStyle=col.replace(')',',0.22)').replace('rgb(','rgba(').replace('#',
+      'rgba('+parseInt(col.slice(1,3),16)+','+parseInt(col.slice(3,5),16)+','+parseInt(col.slice(5,7),16)+',');
+    // simpler:
+    ctx.strokeStyle=col+'44';
+    ctx.lineWidth=1.2;ctx.stroke();
+
+    // shell label arc top
+    ctx.save();
+    ctx.fillStyle=col;
+    ctx.font='bold .68rem Segoe UI';
+    ctx.textAlign='center';
+    ctx.fillText('Capa '+SHELL_NAMES[si]+' (máx '+SHELL_MAX[si]+')',x0,y0-r-6);
+    ctx.restore();
+  });
+
+  // speed per shell: inner = faster
+  const speeds=[0.022,0.013,0.008,0.005,0.003,0.002];
+
+  // update & draw electrons
+  activeShells.forEach(({n,i:si})=>{
+    const r=shellR(si);
+    const col=SHELL_COLORS[si]||'#aaa';
+    const spd=speeds[si]||0.002;
+    if(!eAngles[si])eAngles[si]=Array.from({length:n},(_,i)=>2*Math.PI*i/n);
+
+    for(let ei=0;ei<n;ei++){
+      eAngles[si][ei]+=spd;
+      // skip vacancy slot on K shell
+      if(showVac&&si===0&&ei===0){
+        // draw vacancy pulsing circle
+        const va=eAngles[0][0];
+        const vx=x0+Math.cos(va)*r, vy=y0+Math.sin(va)*r;
+        const vp=0.4+0.35*Math.sin(frame*0.08);
+        ctx.beginPath();ctx.arc(vx,vy,6+vp*4,0,Math.PI*2);
+        ctx.fillStyle=`rgba(180,80,255,${vp*0.35})`;ctx.fill();
+        ctx.beginPath();ctx.arc(vx,vy,4,0,Math.PI*2);
+        ctx.strokeStyle='#c080ff';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle='rgba(180,80,255,.15)';ctx.fill();
+        // label
+        ctx.fillStyle='#c080ff';ctx.font='.58rem Segoe UI';ctx.textAlign='left';
+        ctx.fillText('← Vacante K',vx+8,vy+4);
+        continue;
+      }
+      const ex=x0+Math.cos(eAngles[si][ei])*r;
+      const ey=y0+Math.sin(eAngles[si][ei])*r;
+      // glow
+      ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);
+      ctx.fillStyle=col.slice(0,7)+'33';ctx.fill();
+      // electron dot
+      ctx.beginPath();ctx.arc(ex,ey,3,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.fill();
+    }
+  });
+
+  // nucleus particles jitter
+  const nr=nucR();
+  nucParticles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    const d=Math.sqrt(p.x*p.x+p.y*p.y);
+    if(d>nr*0.8){p.vx*=-0.9;p.vy*=-0.9;}
+    ctx.beginPath();ctx.arc(x0+p.x,y0+p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.col;ctx.fill();
+  });
+  // nucleus glow
+  const ng=ctx.createRadialGradient(x0,y0,0,x0,y0,nr);
+  ng.addColorStop(0,'rgba(255,120,60,.35)');
+  ng.addColorStop(0.6,'rgba(200,60,20,.15)');
+  ng.addColorStop(1,'rgba(200,60,20,0)');
+  ctx.fillStyle=ng;
+  ctx.beginPath();ctx.arc(x0,y0,nr,0,Math.PI*2);ctx.fill();
+  // nucleus border
+  ctx.beginPath();ctx.arc(x0,y0,nr,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,120,60,.5)';ctx.lineWidth=1.5;ctx.stroke();
+
+  // nucleus label
+  ctx.fillStyle='#ffcc44';ctx.font='bold 1rem Segoe UI';ctx.textAlign='center';
+  ctx.fillText(curM.s,x0,y0+4);
+  ctx.fillStyle='#ff9060';ctx.font='.6rem Segoe UI';
+  ctx.fillText('Z='+curM.z,x0,y0+16);
+
+  // Z label below nucleus
+  ctx.fillStyle='rgba(255,200,60,.7)';ctx.font='.58rem Segoe UI';
+  ctx.fillText(curM.z+'p  '+(curM.mass-curM.z)+'n',x0,y0+nr+14);
+
+  frame++;
+  requestAnimationFrame(drawScene);
+}
+drawScene();
+</script>
+</body>
+</html>
